@@ -20,8 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import projectapp.medicinereminder.ui.theme.MedicineReminderTheme
 
-class PatientLogin {
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
