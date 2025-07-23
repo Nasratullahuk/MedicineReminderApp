@@ -1,4 +1,4 @@
-package projectapp.medicinereminder.ui.theme
+package e4294395nasratullahuk.medicinereminder.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

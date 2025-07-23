@@ -1,14 +1,16 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id("com.google.gms.google-services")
+    id("kotlin-kapt")
 }
 
 android {
-    namespace = "projectapp.medicinereminder"
+    namespace = "e4294395nasratullahuk.medicinereminder"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "projectapp.medicinereminder"
+        applicationId = "e4294395nasratullahuk.medicinereminder"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -66,4 +68,19 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.firebase.database.ktx)
+
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
+    // Room Database
+    implementation("androidx.room:room-runtime:2.6.1")
+    annotationProcessor("androidx.room:room-compiler:2.6.1")
+// To use Kotlin annotation processing tool (kapt)
+    kapt("androidx.room:room-compiler:2.6.1")
+// To use Kotlin Symbol Processing (KSP)
+// ksp("androidx.room:room-compiler:2.6.1") // If you use KSP instead of KAPT
+    implementation("androidx.room:room-ktx:2.6.1") // Kotlin Extensions and Coroutines support for Room
 }

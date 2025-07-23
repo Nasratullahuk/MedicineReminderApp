@@ -1,6 +1,5 @@
-package projectapp.medicinereminder.ui.theme
+package e4294395nasratullahuk.medicinereminder.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

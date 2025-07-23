@@ -1,4 +1,4 @@
-package projectapp.medicinereminder
+package e4294395nasratullahuk.medicinereminder
 
 import org.junit.Test
 
