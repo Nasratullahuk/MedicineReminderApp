@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
-// --- 4. ViewModel ---
 class MedicineViewModel(application: Application) : AndroidViewModel(application) {
     private lateinit var repository: MedicineRepository
     val allMedicines: StateFlow<List<Medicine>> = MutableStateFlow(emptyList())

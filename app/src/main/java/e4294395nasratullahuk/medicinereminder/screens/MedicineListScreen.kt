@@ -209,7 +209,7 @@ fun ScheduleMedicineListItem(
                     )
                     medicine.currentQuantity?.let {
                         Text(
-                            text = "Quantity: ${it}" + (medicine.totalQuantity?.let { total -> "/$total" }
+                            text = "Quantity: $it" + (medicine.totalQuantity?.let { total -> "/$total" }
                                 ?: ""),
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (it <= (medicine.refillThreshold

@@ -2,7 +2,6 @@ package e4294395nasratullahuk.medicinereminder.database
 
 import kotlinx.coroutines.flow.Flow
 
-// --- 3. Repository ---
 class MedicineRepository(
     private val medicineDao: MedicineDao,
     private val medicineHistoryDao: MedicineHistoryDao

@@ -28,14 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import e4294395nasratullahuk.medicinereminder.ui.theme.MedicineReminderTheme
+import e4294395nasratullahuk.medicinereminder.screens.User
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
+fun LoginScreenOld(
     onLoginClick: (email: String, password: String) -> Unit = { _, _ -> },
     onRegisterClick: () -> Unit = {}
 ) {
@@ -112,58 +111,13 @@ fun LoginScreen(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewRegistrationScreen() {
-    MedicineReminderTheme {
-        RegistrationScreen()
-    }
-}
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewLoginScreen() {
-    MedicineReminderTheme {
-        LoginScreen()
-    }
-}
 
-//private fun signInWithuseremail(useremail: String, userpassword: String, context: Activity, onLoginSuccess: (type:Int) -> Unit) {
-//    val db = FirebaseDatabase.getInstance()
-//    val sanitizedUid = useremail.replace(".", ",")
-//    val ref = db.getReference("Users").child(sanitizedUid)
-//
-//    ref.get().addOnCompleteListener { task ->
-//        if (task.isSuccessful) {
-//            val userData = task.result?.getValue(UserData::class.java)
-//            if (userData != null) {
-//                if (userData.password == userpassword) {
-//                    //Save User Details
-//                    saveUserDetails(userData, context)
-//                    onLoginSuccess.invoke(1)
-//
-//                    Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
-//                } else {
-//                    Toast.makeText(context, "Invalid Password", Toast.LENGTH_SHORT).show()
-//                }
-//            } else {
-//                Toast.makeText(context, "No user data found", Toast.LENGTH_SHORT).show()
-//            }
-//        } else {
-//            // Data retrieval failed
-//            Toast.makeText(
-//                context,
-//                "Failed to retrieve user data: ${task.exception?.message}",
-//                Toast.LENGTH_SHORT
-//            ).show()
-//        }
-//    }
-//}
 
-fun saveUserDetails(user: UserData, context: Context) {
-    UserDetails.saveUserLoginStatus(context = context, true)
-    UserDetails.saveName(context, user.name)
-    UserDetails.saveEmail(context, user.emailid)
+fun savePatientData(user: User, context: Context) {
+    PatientData.saveLoginStatus(context = context, true)
+    PatientData.saveUserName(context, user.name)
+    PatientData.saveUserEmail(context, user.email)
 }
 
 data class UserData(

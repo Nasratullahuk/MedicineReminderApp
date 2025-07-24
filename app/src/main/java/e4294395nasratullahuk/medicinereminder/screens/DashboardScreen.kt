@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -24,16 +27,21 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import e4294395nasratullahuk.medicinereminder.R
+import e4294395nasratullahuk.medicinereminder.PatientData
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(navController: NavController) {
+
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -47,7 +55,16 @@ fun DashboardScreen(navController: NavController) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                ),
+                actions = { // Add actions block for trailing icons
+                    IconButton(onClick = { navController.navigate("profile_screen") }) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile",
+                            tint = MaterialTheme.colorScheme.onPrimary // Ensure the icon color matches title
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -59,6 +76,13 @@ fun DashboardScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Text(
+                text = "Hi , ${PatientData.getUserName(context = context)}",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             Text(
                 text = "Manage Your Medicines",
                 style = MaterialTheme.typography.titleLarge,
@@ -91,6 +115,18 @@ fun DashboardScreen(navController: NavController) {
                 icon = R.drawable.iv_medicine_history,
                 onClick = {
                     navController.navigate("global_medicine_history_list")
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // New About Us Card
+            DashboardCard(
+                title = "About Us",
+                description = "Learn more about the app and contact us.",
+                icon = R.drawable.iv_aboutus, // Using Info icon
+                onClick = {
+                    navController.navigate("about_us_screen")
                 }
             )
         }

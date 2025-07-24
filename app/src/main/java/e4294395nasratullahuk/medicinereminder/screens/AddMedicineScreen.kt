@@ -3,6 +3,7 @@ package e4294395nasratullahuk.medicinereminder.screens
 import android.Manifest
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -70,6 +71,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import android.provider.Settings
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -132,6 +134,18 @@ fun AddMedicineScreen(navController: NavController, viewModel: MedicineViewModel
             ).show()
         }
     }
+
+    val exactAlarmPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (NotificationScheduler.canScheduleExactAlarms(context)) {
+            Toast.makeText(context, "Alarms & reminders permission granted!", Toast.LENGTH_SHORT).show()
+
+        } else {
+            Toast.makeText(context, "Alarms & reminders permission denied. Exact reminders may not work.", Toast.LENGTH_LONG).show()
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -448,8 +462,7 @@ fun AddMedicineScreen(navController: NavController, viewModel: MedicineViewModel
                 Button(
                     onClick = {
                         val parsedTotalQuantity = totalQuantity.toIntOrNull()
-                        val parsedCurrentQuantity =
-                            currentQuantity.toIntOrNull() ?: parsedTotalQuantity
+                        val parsedCurrentQuantity = currentQuantity.toIntOrNull() ?: parsedTotalQuantity
                         val parsedRefillThreshold = refillThreshold.toIntOrNull()
 
                         if (name.isNotBlank() && dosage.isNotBlank() && times.any { it.isNotBlank() } &&
@@ -459,7 +472,7 @@ fun AddMedicineScreen(navController: NavController, viewModel: MedicineViewModel
                                 name = name,
                                 photoUri = photoUri?.toString(),
                                 dosage = dosage,
-                                times = times.filter { it.isNotBlank() }, // Save only non-empty times
+                                times = times.filter { it.isNotBlank() },
                                 frequencyType = frequencyType,
                                 specificDays = if (frequencyType == "Specific Days") specificDays.toList() else null,
                                 totalQuantity = parsedTotalQuantity,
@@ -477,41 +490,52 @@ fun AddMedicineScreen(navController: NavController, viewModel: MedicineViewModel
                                         Manifest.permission.POST_NOTIFICATIONS
                                     ) == PackageManager.PERMISSION_GRANTED
                                 ) {
-                                    // Permission already granted, save and schedule
+                                    // Check for SCHEDULE_EXACT_ALARM permission on Android 12+
+                                    if (NotificationScheduler.canScheduleExactAlarms(context)) {
+                                        viewModel.viewModelScope.launch {
+                                            val medicineId = viewModel.insert(newMedicine).toInt()
+                                            NotificationScheduler.scheduleAllNotifications(context, newMedicine.copy(id = medicineId))
+                                            navController.popBackStack()
+                                        }
+                                    } else {
+                                        // Request SCHEDULE_EXACT_ALARM permission
+                                        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                            data = Uri.fromParts("package", context.packageName, null)
+                                        }
+                                        exactAlarmPermissionLauncher.launch(intent)
+                                        Toast.makeText(context, "Please grant 'Alarms & reminders' permission in settings.", Toast.LENGTH_LONG).show()
+                                    }
+                                } else {
+                                    // Request POST_NOTIFICATIONS permission
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    Toast.makeText(context, "Please grant notification permission to set reminders.", Toast.LENGTH_LONG).show()
+                                }
+                            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12 (API 31) to Android 12L (API 32)
+                                // Only SCHEDULE_EXACT_ALARM is required here, POST_NOTIFICATIONS is runtime for 33+
+                                if (NotificationScheduler.canScheduleExactAlarms(context)) {
                                     viewModel.viewModelScope.launch {
                                         val medicineId = viewModel.insert(newMedicine).toInt()
-                                        NotificationScheduler.scheduleAllNotifications(
-                                            context,
-                                            newMedicine.copy(id = medicineId)
-                                        )
+                                        NotificationScheduler.scheduleAllNotifications(context, newMedicine.copy(id = medicineId))
                                         navController.popBackStack()
                                     }
                                 } else {
-                                    // Request permission
-                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    Toast.makeText(
-                                        context,
-                                        "Please grant notification permission to set reminders.",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
+                                    exactAlarmPermissionLauncher.launch(intent)
+                                    Toast.makeText(context, "Please grant 'Alarms & reminders' permission in settings.", Toast.LENGTH_LONG).show()
                                 }
-                            } else {
-                                // For older Android versions, permission is granted at install time
+                            }
+                            else {
+                                // For older Android versions, permissions are granted at install time
                                 viewModel.viewModelScope.launch {
                                     val medicineId = viewModel.insert(newMedicine).toInt()
-                                    NotificationScheduler.scheduleAllNotifications(
-                                        context,
-                                        newMedicine.copy(id = medicineId)
-                                    )
+                                    NotificationScheduler.scheduleAllNotifications(context, newMedicine.copy(id = medicineId))
                                     navController.popBackStack()
                                 }
                             }
                         } else {
-                            Toast.makeText(
-                                context,
-                                "Please fill all required fields (Name, Dosage, Times, Frequency, and Specific Days if selected).",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            Toast.makeText(context, "Please fill all required fields (Name, Dosage, Times, Frequency, and Specific Days if selected).", Toast.LENGTH_LONG).show()
                         }
                     },
                     modifier = Modifier
@@ -554,13 +578,12 @@ fun AddMedicineScreen(navController: NavController, viewModel: MedicineViewModel
     }
 }
 
-// Helper function to create a temporary image file for camera capture
 fun createImageFile(context: Context): File {
     val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val storageDir: File? = context.getExternalFilesDir(null)
     return File.createTempFile(
-        "JPEG_${timeStamp}_", /* prefix */
-        ".jpg", /* suffix */
-        storageDir /* directory */
+        "JPEG_${timeStamp}_",
+        ".jpg",
+        storageDir
     )
 }

@@ -18,7 +18,11 @@ import e4294395nasratullahuk.medicinereminder.database.AppDatabase
 import e4294395nasratullahuk.medicinereminder.database.Medicine
 import java.util.Calendar
 
-// --- 5. Notification Scheduler (Updated for Flexible Scheduling & Refill) ---
+import android.app.AlarmManager
+
+
+// Assuming existing classes: Medicine, NotificationReceiver
+
 object NotificationScheduler {
     const val CHANNEL_ID = "medicine_reminder_channel"
     const val CHANNEL_NAME = "Medicine Reminders"
@@ -33,13 +37,11 @@ object NotificationScheduler {
             val notificationManager: NotificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            // Medicine Reminder Channel
             val reminderChannel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
                 description = CHANNEL_DESCRIPTION
             }
             notificationManager.createNotificationChannel(reminderChannel)
 
-            // Refill Reminder Channel
             val refillChannel = NotificationChannel(REFILL_CHANNEL_ID, REFILL_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
                 description = REFILL_CHANNEL_DESCRIPTION
             }
@@ -47,7 +49,16 @@ object NotificationScheduler {
         }
     }
 
-    // Schedules all notifications for a given medicine (daily doses and refill)
+    // New helper function to check if SCHEDULE_EXACT_ALARM permission is granted
+    fun canScheduleExactAlarms(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12 (API 31) and above
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true // Permission not required or granted at install time for older Android versions
+        }
+    }
+
     fun scheduleAllNotifications(context: Context, medicine: Medicine) {
         // Cancel existing alarms for this medicine first to avoid duplicates
         cancelAllNotifications(context, medicine.id)
@@ -66,6 +77,12 @@ object NotificationScheduler {
     }
 
     fun scheduleMedicineDoseNotification(context: Context, medicine: Medicine, timeString: String, timeIndex: Int) {
+        // Only attempt to schedule if the permission is granted
+        if (!canScheduleExactAlarms(context)) {
+            Toast.makeText(context, "Please grant 'Alarms & reminders' permission for exact reminders.", Toast.LENGTH_LONG).show()
+            return // Exit if permission is not granted
+        }
+
         val requestCode = medicine.id * 1000 + timeIndex // Unique request code for each dose time
 
         val intent = Intent(context, NotificationReceiver::class.java).apply {
@@ -83,13 +100,13 @@ object NotificationScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE // Use FLAG_IMMUTABLE for API 31+
         )
 
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val nextAlarmTimeMillis = calculateNextAlarmTime(medicine, timeString)
 
         if (nextAlarmTimeMillis > 0) {
-            alarmManager.setExactAndAllowWhileIdle( // Use setExactAndAllowWhileIdle for precise alarms
-                android.app.AlarmManager.RTC_WAKEUP,
+            alarmManager.setExactAndAllowWhileIdle( // Requires SCHEDULE_EXACT_ALARM permission on API 31+
+                AlarmManager.RTC_WAKEUP,
                 nextAlarmTimeMillis,
                 pendingIntent
             )
@@ -100,6 +117,12 @@ object NotificationScheduler {
     }
 
     private fun scheduleRefillNotification(context: Context, medicine: Medicine) {
+        // Only attempt to schedule if the permission is granted
+        if (!canScheduleExactAlarms(context)) {
+            Toast.makeText(context, "Please grant 'Alarms & reminders' permission for refill reminders.", Toast.LENGTH_LONG).show()
+            return // Exit if permission is not granted
+        }
+
         val requestCode = medicine.id * 100000 // Unique request code for refill (different range)
 
         val intent = Intent(context, NotificationReceiver::class.java).apply {
@@ -117,22 +140,21 @@ object NotificationScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        // Schedule refill reminder for next day at a reasonable time (e.g., 9 AM)
         val calendar = Calendar.getInstance().apply {
             timeInMillis = System.currentTimeMillis()
             set(Calendar.HOUR_OF_DAY, 9) // 9 AM
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            if (before(Calendar.getInstance())) { // If 9 AM today is past, schedule for tomorrow
+            if (before(Calendar.getInstance())) {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
         }
 
         alarmManager.setExactAndAllowWhileIdle(
-            android.app.AlarmManager.RTC_WAKEUP,
+            AlarmManager.RTC_WAKEUP,
             calendar.timeInMillis,
             pendingIntent
         )
@@ -140,7 +162,6 @@ object NotificationScheduler {
     }
 
 
-    // Helper to calculate the next alarm time based on frequency
     private fun calculateNextAlarmTime(medicine: Medicine, timeString: String): Long {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = System.currentTimeMillis()
@@ -159,18 +180,14 @@ object NotificationScheduler {
 
         when (medicine.frequencyType) {
             "Daily" -> {
-                // If scheduled time is in the past for today, set for tomorrow
                 if (calendar.before(now)) {
                     calendar.add(Calendar.DAY_OF_YEAR, 1)
                 }
             }
             "Alternate Day" -> {
-                // If scheduled time is in the past for today, check alternate day logic
                 if (calendar.before(now)) {
                     calendar.add(Calendar.DAY_OF_YEAR, 1)
                 }
-                // For initial scheduling, just ensure it's not in the past.
-                // The BroadcastReceiver will be responsible for rescheduling to the *next* alternate day.
             }
             "Specific Days" -> {
                 medicine.specificDays?.let { days ->
@@ -179,8 +196,7 @@ object NotificationScheduler {
                     var nextValidTime: Long = -1L
                     var tempCalendar = calendar.clone() as Calendar
 
-                    // Find the next valid day
-                    for (i in 0 until 8) { // Check today and next 7 days
+                    for (i in 0 until 8) {
                         if (tempCalendar.before(now)) {
                             tempCalendar.add(Calendar.DAY_OF_YEAR, 1)
                             tempCalendar.set(Calendar.HOUR_OF_DAY, timeString.split(":")[0].toInt())
@@ -195,23 +211,21 @@ object NotificationScheduler {
                         }
                         tempCalendar.add(Calendar.DAY_OF_YEAR, 1)
                     }
-                    if (nextValidTime == -1L) { // If no valid day found in next 7 days (unlikely)
+                    if (nextValidTime == -1L) {
                         return -1L
                     }
                     calendar.timeInMillis = nextValidTime
-                } ?: return -1L // No specific days defined
+                } ?: return -1L
             }
         }
         return calendar.timeInMillis
     }
 
 
-    // Cancels all notifications associated with a medicine (dose reminders + refill)
     fun cancelAllNotifications(context: Context, medicineId: Int) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        // Cancel dose reminders (assuming max 10 doses per medicine for request codes)
-        for (i in 0 until 10) { // Iterate through possible dose request codes
+        for (i in 0 until 10) {
             val requestCode = medicineId * 1000 + i
             val intent = Intent(context, NotificationReceiver::class.java).apply {
                 action = "ACTION_MEDICINE_REMINDER"
@@ -225,7 +239,6 @@ object NotificationScheduler {
             pendingIntent?.let { alarmManager.cancel(it) }
         }
 
-        // Cancel refill reminder
         val refillRequestCode = medicineId * 100000
         val refillIntent = Intent(context, NotificationReceiver::class.java).apply {
             action = "ACTION_REFILL_REMINDER"
@@ -238,7 +251,7 @@ object NotificationScheduler {
         )
         refillPendingIntent?.let { alarmManager.cancel(it) }
 
-        Toast.makeText(context, "All reminders cancelled for ID $medicineId", Toast.LENGTH_SHORT).show()
+//        Toast.makeText(context, "All reminders cancelled for ID $medicineId", Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -324,11 +337,7 @@ class NotificationReceiver : BroadcastReceiver() {
                 }
             } catch (e: Exception) {
                 Log.e("NotificationReceiver", "Error in onReceive: ${e.message}", e)
-                // Optionally, show a toast or a persistent notification to alert the user
-                // about a critical error in the reminder system.
-                // Toast.makeText(context, "Medicine reminder system error: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
-                // IMPORTANT: Must call finish() when all asynchronous work is done
                 pendingResult.finish()
             }
         }
