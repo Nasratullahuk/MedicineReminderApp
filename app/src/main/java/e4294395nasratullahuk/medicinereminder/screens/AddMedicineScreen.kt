@@ -72,6 +72,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import android.provider.Settings
+import androidx.compose.material.icons.filled.Delete
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -240,7 +241,7 @@ fun AddMedicineScreen(navController: NavController, viewModel: MedicineViewModel
                             if (times.size > 1) {
                                 IconButton(onClick = { times.removeAt(index) }) {
                                     Icon(
-                                        Icons.Default.Info,
+                                        Icons.Default.Delete,
                                         contentDescription = "Remove Time",
                                         tint = MaterialTheme.colorScheme.error
                                     )
